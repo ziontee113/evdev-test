@@ -1,16 +1,13 @@
 #![allow(dead_code)]
 
-use std::{thread::sleep, time::Duration};
-
 use evdev::{
-    uinput::VirtualDeviceBuilder, AttributeSet, Device, EventType, InputEvent, InputEventKind, Key,
-    MiscType, Synchronization,
+    uinput::{VirtualDevice, VirtualDeviceBuilder},
+    AttributeSet, Device, EventType, InputEvent, InputEventKind, Key,
 };
 
 mod _pick_device;
 
 fn main() {
-    // evtest()
     let device_paths = vec![
         "usb-0000:00:1d.0-1.5.1.4/input0", // A
         "usb-0000:00:1d.0-1.5.2/input0",   // B
@@ -18,50 +15,15 @@ fn main() {
         "usb-0000:00:1d.0-1.5.1.1/input0",
         "usb-0000:00:1d.0-1.5.3/input0",
     ];
+
     test_hard_coded_device(device_paths.get(1).unwrap())
 }
 
-fn virtual_input_test() -> std::io::Result<()> {
+fn new_virtual_keyboard() -> VirtualDevice {
     let mut keys = AttributeSet::<Key>::new();
     keys.insert(Key::KEY_A);
 
-    let mut device = VirtualDeviceBuilder::new()?
-        .name("Fake Keyboard")
-        .with_keys(&keys)?
-        .build()
-        .unwrap();
-
-    for path in device.enumerate_dev_nodes_blocking()? {
-        let path = path?;
-        println!("Available as {}", path.display());
-    }
-
-    let type_ = EventType::KEY;
-    let code = Key::KEY_A.code();
-
-    println!("Waiting for Ctrl-C...");
-    loop {
-        let down_event = InputEvent::new(type_, code, 1);
-        device.emit(&[down_event]).unwrap();
-        println!("Pressed.");
-        sleep(Duration::from_secs(2));
-
-        let up_event = InputEvent::new(type_, code, 0);
-        device.emit(&[up_event]).unwrap();
-        println!("Released.");
-        sleep(Duration::from_secs(2));
-    }
-}
-
-fn test_hard_coded_device(name: &str) {
-    let mut device = pick_device_from_path(name);
-    device.grab().unwrap();
-
-    //
-    let mut keys = AttributeSet::<Key>::new();
-    keys.insert(Key::KEY_A);
-
-    let mut virtual_device = VirtualDeviceBuilder::new()
+    let virtual_device = VirtualDeviceBuilder::new()
         .unwrap()
         .name("Fake Keyboard")
         .with_keys(&keys)
@@ -69,15 +31,26 @@ fn test_hard_coded_device(name: &str) {
         .build()
         .unwrap();
 
+    return virtual_device;
+}
+
+fn emit_keyboard_event_constructor(value: i32) -> InputEvent {
     let type_ = EventType::KEY;
     let code = Key::KEY_A.code();
+    InputEvent::new(type_, code, value)
+}
+
+fn test_hard_coded_device(name: &str) {
+    let mut device = pick_device_from_path(name);
+    device.grab().unwrap();
+
+    let mut virtual_device = new_virtual_keyboard();
 
     loop {
         for ev in device.fetch_events().unwrap() {
-            let kind = ev.kind();
-            if kind == InputEventKind::Key(Key::KEY_J) {
-                let le_event = InputEvent::new(type_, code, ev.value());
-                virtual_device.emit(&[le_event]).unwrap();
+            if ev.kind() == InputEventKind::Key(Key::KEY_J) {
+                let emit_event = emit_keyboard_event_constructor(ev.value());
+                virtual_device.emit(&[emit_event]).unwrap();
             }
         }
     }

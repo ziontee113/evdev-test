@@ -5,10 +5,18 @@ use evdev::{Device, InputEventKind, Key, MiscType, Synchronization};
 mod _pick_device;
 
 fn main() {
-    // println!("Hello, world!");
     // evtest()
+    let device_paths = vec![
+        "usb-0000:00:1d.0-1.5.1.4/input0", // A
+        "usb-0000:00:1d.0-1.5.2/input0",   // B
+        "usb-0000:00:1d.0-1.5.1.2/input0", // C
+        "usb-0000:00:1d.0-1.5.1.1/input0",
+        "usb-0000:00:1d.0-1.5.3/input0",
+    ];
+    test_hard_coded_device(device_paths.get(0).unwrap())
+}
 
-    let name = "usb-0000:00:1d.0-1.5.2/input0";
+fn test_hard_coded_device(name: &str) {
     let mut device = pick_device_from_path(name);
     device.grab().unwrap();
 
@@ -32,6 +40,7 @@ fn pick_device_from_path(path: &str) -> Device {
     let devices = evdev::enumerate().map(|t| t.1).collect::<Vec<_>>();
     let mut x = 0;
     for (i, d) in devices.iter().enumerate() {
+        // println!("{}", d.physical_path().unwrap());
         if d.physical_path().unwrap() == path {
             x = i;
             break;

@@ -6,17 +6,20 @@ use evdev::{
 };
 
 mod _pick_device;
+mod experiment;
 
 fn main() {
-    let device_paths = vec![
-        "usb-0000:00:1d.0-1.5.1.4/input0", // A
-        "usb-0000:00:1d.0-1.5.2/input0",   // B
-        "usb-0000:00:1d.0-1.5.1.2/input0", // C
-        "usb-0000:00:1d.0-1.5.1.1/input0",
-        "usb-0000:00:1d.0-1.5.3/input0",
-    ];
+    // let device_paths = vec![
+    //     "usb-0000:00:1d.0-1.5.1.4/input0", // A
+    //     "usb-0000:00:1d.0-1.5.2/input0",   // B
+    //     "usb-0000:00:1d.0-1.5.1.2/input0", // C
+    //     "usb-0000:00:1d.0-1.5.1.1/input0",
+    //     "usb-0000:00:1d.0-1.5.3/input0",
+    // ];
+    //
+    // test_hard_coded_device(device_paths.get(1).unwrap())
 
-    test_hard_coded_device(device_paths.get(1).unwrap())
+    experiment::something()
 }
 
 fn new_virtual_keyboard() -> VirtualDevice {

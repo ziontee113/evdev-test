@@ -18,44 +18,21 @@ pub fn something() {
     ];
 
     let capslock_value = Arc::new(Mutex::new(0));
-    let vvip = Arc::new(Mutex::new(new_virtual_keyboard()));
+    let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
 
     let handle_1 = grab_device(
         device_paths.get(1).unwrap().to_string(),
         Arc::clone(&capslock_value),
-        Arc::clone(&vvip),
+        Arc::clone(&virtual_device),
     );
     let handle_2 = grab_device(
         device_paths.get(0).unwrap().to_string(),
         Arc::clone(&capslock_value),
-        Arc::clone(&vvip),
+        Arc::clone(&virtual_device),
     );
 
     handle_1.join().unwrap();
     handle_2.join().unwrap();
-}
-
-fn press_z(value: i32) -> InputEvent {
-    let type_ = EventType::KEY;
-    let code = Key::KEY_Z.code();
-    let event = InputEvent::new(type_, code, value);
-
-    return event;
-}
-
-fn new_virtual_keyboard() -> VirtualDevice {
-    let mut keys = AttributeSet::<Key>::new();
-    keys.insert(Key::KEY_Z);
-
-    let virtual_device = VirtualDeviceBuilder::new()
-        .unwrap()
-        .name("Fake Keyboard")
-        .with_keys(&keys)
-        .unwrap()
-        .build()
-        .unwrap();
-
-    return virtual_device;
 }
 
 fn grab_device(
@@ -80,15 +57,43 @@ fn grab_device(
                 }
                 if path == second_path && ev.kind() == InputEventKind::Key(Key::KEY_J) {
                     if *capslock_value.lock().unwrap() > 0 {
-                        let emmit_event = press_z(ev.value());
+                        let emmit_event = emit_event_constructor(ev.value());
                         virtual_device.lock().unwrap().emit(&[emmit_event]).unwrap();
                     }
+                }
+
+                if path == first_path && ev.kind() == InputEventKind::Key(Key::KEY_A) {
+                    let emmit_event = emit_event_constructor(ev.value());
+                    virtual_device.lock().unwrap().emit(&[emmit_event]).unwrap();
                 }
             }
         }
     });
 
     return handle;
+}
+
+fn emit_event_constructor(value: i32) -> InputEvent {
+    let type_ = EventType::KEY;
+    let code = Key::KEY_Z.code();
+    let event = InputEvent::new(type_, code, value);
+
+    return event;
+}
+
+fn new_virtual_keyboard() -> VirtualDevice {
+    let mut keys = AttributeSet::<Key>::new();
+    keys.insert(Key::KEY_Z);
+
+    let virtual_device = VirtualDeviceBuilder::new()
+        .unwrap()
+        .name("Fake Keyboard")
+        .with_keys(&keys)
+        .unwrap()
+        .build()
+        .unwrap();
+
+    return virtual_device;
 }
 
 fn get_device_from_path(path: &str) -> Device {

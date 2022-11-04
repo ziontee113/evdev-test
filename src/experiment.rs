@@ -18,14 +18,17 @@ pub fn something() {
     ];
 
     let capslock_value = Arc::new(Mutex::new(0));
+    let vvip = Arc::new(Mutex::new(new_virtual_keyboard()));
 
     let handle_1 = grab_device(
         device_paths.get(1).unwrap().to_string(),
         Arc::clone(&capslock_value),
+        Arc::clone(&vvip),
     );
     let handle_2 = grab_device(
         device_paths.get(0).unwrap().to_string(),
         Arc::clone(&capslock_value),
+        Arc::clone(&vvip),
     );
 
     handle_1.join().unwrap();
@@ -55,20 +58,18 @@ fn new_virtual_keyboard() -> VirtualDevice {
     return virtual_device;
 }
 
-fn grab_device(path: String, capslock_value: Arc<Mutex<i32>>) -> thread::JoinHandle<()> {
+fn grab_device(
+    path: String,
+    capslock_value: Arc<Mutex<i32>>,
+    virtual_device: Arc<Mutex<VirtualDevice>>,
+) -> thread::JoinHandle<()> {
     let handle = thread::spawn(move || {
         let mut device = get_device_from_path(&path);
         device.grab().unwrap();
 
-        // let device_path = device.physical_path().unwrap().to_string();
-
         // HACK:
         let first_path = "usb-0000:00:1d.0-1.5.1.4/input0";
         let second_path = "usb-0000:00:1d.0-1.5.2/input0";
-        let mut virtual_device = new_virtual_keyboard();
-        if path == second_path {
-            virtual_device = new_virtual_keyboard();
-        }
 
         loop {
             for ev in device.fetch_events().unwrap() {
@@ -80,7 +81,7 @@ fn grab_device(path: String, capslock_value: Arc<Mutex<i32>>) -> thread::JoinHan
                 if path == second_path && ev.kind() == InputEventKind::Key(Key::KEY_J) {
                     if *capslock_value.lock().unwrap() > 0 {
                         let emmit_event = press_z(ev.value());
-                        virtual_device.emit(&[emmit_event]).unwrap();
+                        virtual_device.lock().unwrap().emit(&[emmit_event]).unwrap();
                     }
                 }
             }

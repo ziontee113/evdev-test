@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
     thread,
+    time::SystemTime,
 };
 
 use evdev::{
@@ -22,8 +23,8 @@ pub fn something() {
     ];
 
     let keypress_vector: Arc<Mutex<Vec<(String, u16)>>> = Arc::new(Mutex::new([].to_vec()));
-
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
+    let time_now = Arc::new(Mutex::new(SystemTime::now()));
 
     // threads
     let aliases = vec!["L1", "R1"];
@@ -38,6 +39,7 @@ pub fn something() {
             alias.to_string(),
             rules.to_vec(),
             Arc::clone(&keypress_vector),
+            Arc::clone(&time_now),
         );
 
         handles.push(handle);
@@ -54,6 +56,7 @@ fn grab_device(
     device_alias: String,
     rules: Vec<Vec<u16>>,
     keypress_vector: Arc<Mutex<Vec<(String, u16)>>>,
+    time_now: Arc<Mutex<SystemTime>>,
 ) -> thread::JoinHandle<()> {
     let handle = thread::spawn(move || {
         let mut device = get_device_from_path(&path);
@@ -73,6 +76,7 @@ fn grab_device(
                         ev,
                         device_alias.to_string(),
                         &mut keypress_vector.lock().unwrap(),
+                        &mut time_now.lock().unwrap(),
                     );
                 }
             }
@@ -86,6 +90,7 @@ fn update_keypress_vector(
     ev: InputEvent,
     device_alias: String,
     keypress_vector: &mut Vec<(String, u16)>,
+    time_now: &mut SystemTime,
 ) {
     let alias_and_code = (device_alias, ev.code());
 
@@ -96,8 +101,20 @@ fn update_keypress_vector(
                 .position(|x| x == &alias_and_code)
                 .unwrap();
             keypress_vector.remove(i);
+
+            if keypress_vector.len() == 0 {
+                let time_diff = time_now.elapsed().unwrap().as_millis();
+                println!(" {:?}", time_diff)
+            }
         }
-        1 => keypress_vector.push(alias_and_code),
+        1 => {
+            if keypress_vector.len() == 0 {
+                *time_now = SystemTime::now();
+                println!(" {:?}", time_now)
+            }
+
+            keypress_vector.push(alias_and_code);
+        }
         _ => (),
     }
 

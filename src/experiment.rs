@@ -87,20 +87,21 @@ fn update_keypress_vector(
     device_alias: String,
     keypress_vector: &mut Vec<(String, u16)>,
 ) {
-    let value = ev.value();
-    let code = ev.code();
     let alias_and_code = (device_alias, ev.code());
 
-    match value {
+    match ev.value() {
         0 => {
-            let i = keypress_vector.iter().position(|x| x.1 == code).unwrap();
+            let i = keypress_vector
+                .iter()
+                .position(|x| x == &alias_and_code)
+                .unwrap();
             keypress_vector.remove(i);
         }
         1 => keypress_vector.push(alias_and_code),
         _ => (),
     }
 
-    println!("{:?} {}", keypress_vector, value)
+    println!("{:?} {}", keypress_vector, ev.value())
 }
 
 fn emit_event_constructor(value: i32) -> InputEvent {

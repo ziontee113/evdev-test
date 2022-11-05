@@ -48,6 +48,11 @@ fn grab_device(
         let first_path = "usb-0000:00:1d.0-1.5.1.4/input0";
         let second_path = "usb-0000:00:1d.0-1.5.2/input0";
 
+        // TODO: make some rules
+        // if a key doesn't have logic
+        // it behaves normally
+        // --> with a virtual device, you can easily "cut the ties"
+
         loop {
             for ev in device.fetch_events().unwrap() {
                 if path == first_path && ev.kind() == InputEventKind::Key(Key::KEY_CAPSLOCK) {
@@ -63,7 +68,8 @@ fn grab_device(
                 }
 
                 if path == first_path && ev.kind() == InputEventKind::Key(Key::KEY_A) {
-                    let emmit_event = emit_event_constructor(ev.value());
+                    let emmit_event =
+                        InputEvent::new(EventType::KEY, Key::KEY_LEFTSHIFT.code(), ev.value());
                     virtual_device.lock().unwrap().emit(&[emmit_event]).unwrap();
                 }
             }
@@ -76,14 +82,42 @@ fn grab_device(
 fn emit_event_constructor(value: i32) -> InputEvent {
     let type_ = EventType::KEY;
     let code = Key::KEY_Z.code();
-    let event = InputEvent::new(type_, code, value);
-
-    return event;
+    InputEvent::new(type_, code, value)
 }
 
 fn new_virtual_keyboard() -> VirtualDevice {
     let mut keys = AttributeSet::<Key>::new();
+    keys.insert(Key::KEY_LEFTSHIFT);
+    keys.insert(Key::KEY_LEFTCTRL);
+    keys.insert(Key::KEY_LEFTALT);
+    keys.insert(Key::KEY_LEFTMETA);
+    keys.insert(Key::KEY_Q);
+    keys.insert(Key::KEY_W);
+    keys.insert(Key::KEY_E);
+    keys.insert(Key::KEY_R);
+    keys.insert(Key::KEY_T);
+    keys.insert(Key::KEY_Y);
+    keys.insert(Key::KEY_I);
+    keys.insert(Key::KEY_O);
+    keys.insert(Key::KEY_P);
+    keys.insert(Key::KEY_A);
+    keys.insert(Key::KEY_S);
+    keys.insert(Key::KEY_D);
+    keys.insert(Key::KEY_F);
+    keys.insert(Key::KEY_G);
+    keys.insert(Key::KEY_H);
+    keys.insert(Key::KEY_J);
+    keys.insert(Key::KEY_K);
+    keys.insert(Key::KEY_L);
     keys.insert(Key::KEY_Z);
+    keys.insert(Key::KEY_X);
+    keys.insert(Key::KEY_C);
+    keys.insert(Key::KEY_V);
+    keys.insert(Key::KEY_B);
+    keys.insert(Key::KEY_V);
+    keys.insert(Key::KEY_N);
+    keys.insert(Key::KEY_M);
+    keys.insert(Key::KEY_COMMA);
 
     let virtual_device = VirtualDeviceBuilder::new()
         .unwrap()

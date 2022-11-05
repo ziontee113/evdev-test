@@ -9,13 +9,6 @@ use evdev::{
     AttributeSet, Device, EventType, InputEvent, InputEventKind, Key, MiscType, Synchronization,
 };
 
-#[derive(Debug)]
-struct InputSequenceElement {
-    device_alias: String,
-    code: u16,
-    value: i32,
-}
-
 pub fn something() {
     let device_hash_map = HashMap::from([
         ("L1", "usb-0000:00:1d.0-1.5.1.4/input0"),
@@ -28,8 +21,7 @@ pub fn something() {
         vec![Key::KEY_LEFTCTRL.code(), Key::KEY_K.code()],
     ];
 
-    // TODO: Modify baka_mitai_vector to also store devive_alias
-    let baka_mitai_vector: Arc<Mutex<Vec<(String, u16)>>> = Arc::new(Mutex::new([].to_vec()));
+    let keypress_vector: Arc<Mutex<Vec<(String, u16)>>> = Arc::new(Mutex::new([].to_vec()));
 
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
 
@@ -45,7 +37,7 @@ pub fn something() {
             Arc::clone(&virtual_device),
             alias.to_string(),
             rules.to_vec(),
-            Arc::clone(&baka_mitai_vector),
+            Arc::clone(&keypress_vector),
         );
 
         handles.push(handle);
@@ -61,7 +53,7 @@ fn grab_device(
     virtual_device: Arc<Mutex<VirtualDevice>>,
     device_alias: String,
     rules: Vec<Vec<u16>>,
-    baka_mitai_vector: Arc<Mutex<Vec<(String, u16)>>>,
+    keypress_vector: Arc<Mutex<Vec<(String, u16)>>>,
 ) -> thread::JoinHandle<()> {
     let handle = thread::spawn(move || {
         let mut device = get_device_from_path(&path);
@@ -77,31 +69,21 @@ fn grab_device(
                 if ev.kind() != InputEventKind::Synchronization(Synchronization::SYN_REPORT)
                     && ev.kind() != InputEventKind::Misc(MiscType::MSC_SCAN)
                 {
-                    let sequence_element = InputSequenceElement {
-                        device_alias: device_alias.to_string(),
-                        code: ev.code(),
-                        value: ev.value(),
-                    };
-
-                    println!(" {:#?}", sequence_element);
-
-                    // baka mitai
-
-                    let mut baka_mitai_vector = baka_mitai_vector.lock().unwrap();
+                    let mut keypress_vector = keypress_vector.lock().unwrap();
                     let value = ev.value();
                     let code = ev.code();
                     let alias_and_code = (device_alias.to_string(), ev.code());
 
                     if value == 0 {
-                        let i = baka_mitai_vector.iter().position(|x| x.1 == code).unwrap();
-                        baka_mitai_vector.remove(i);
+                        let i = keypress_vector.iter().position(|x| x.1 == code).unwrap();
+                        keypress_vector.remove(i);
                     } else {
-                        if !baka_mitai_vector.contains(&alias_and_code) {
-                            baka_mitai_vector.push(alias_and_code)
+                        if !keypress_vector.contains(&alias_and_code) {
+                            keypress_vector.push(alias_and_code)
                         }
                     }
 
-                    println!("{:?}", baka_mitai_vector)
+                    println!("{:?}", keypress_vector)
                 }
             }
         }

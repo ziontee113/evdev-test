@@ -69,8 +69,11 @@ fn grab_device(
                 if ev.kind() != InputEventKind::Synchronization(Synchronization::SYN_REPORT)
                     && ev.kind() != InputEventKind::Misc(MiscType::MSC_SCAN)
                 {
-                    let mut keypress_vector = keypress_vector.lock().unwrap();
-                    update_keypress_vector(ev, device_alias.to_string(), &mut keypress_vector);
+                    update_keypress_vector(
+                        ev,
+                        device_alias.to_string(),
+                        &mut keypress_vector.lock().unwrap(),
+                    );
                 }
             }
         }
@@ -88,16 +91,16 @@ fn update_keypress_vector(
     let code = ev.code();
     let alias_and_code = (device_alias, ev.code());
 
-    if value == 0 {
-        let i = keypress_vector.iter().position(|x| x.1 == code).unwrap();
-        keypress_vector.remove(i);
-    } else {
-        if !keypress_vector.contains(&alias_and_code) {
-            keypress_vector.push(alias_and_code)
+    match value {
+        0 => {
+            let i = keypress_vector.iter().position(|x| x.1 == code).unwrap();
+            keypress_vector.remove(i);
         }
+        1 => keypress_vector.push(alias_and_code),
+        _ => (),
     }
 
-    println!("{:?}", keypress_vector)
+    println!("{:?} {}", keypress_vector, value)
 }
 
 fn emit_event_constructor(value: i32) -> InputEvent {

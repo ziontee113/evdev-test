@@ -17,14 +17,6 @@ struct InputSequenceElement {
 }
 
 pub fn something() {
-    // let device_paths = vec![
-    //     "usb-0000:00:1d.0-1.5.1.4/input0", // A
-    //     "usb-0000:00:1d.0-1.5.2/input0",   // B
-    //     "usb-0000:00:1d.0-1.5.1.2/input0", // C
-    //     "usb-0000:00:1d.0-1.5.1.1/input0",
-    //     "usb-0000:00:1d.0-1.5.3/input0",
-    // ];
-
     let device_hash_map = HashMap::from([
         ("L1", "usb-0000:00:1d.0-1.5.1.4/input0"),
         ("R1", "usb-0000:00:1d.0-1.5.2/input0"),
@@ -36,30 +28,33 @@ pub fn something() {
         vec![Key::KEY_LEFTCTRL.code(), Key::KEY_K.code()],
     ];
 
-    let super_idol: Arc<Mutex<Vec<u16>>> = Arc::new(Mutex::new([].to_vec()));
+    let baka_mitai_vector: Arc<Mutex<Vec<u16>>> = Arc::new(Mutex::new([].to_vec()));
 
     let capslock_value = Arc::new(Mutex::new(0));
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
 
-    let handle_1 = grab_device(
-        device_hash_map.get("L1").unwrap().to_string(),
-        Arc::clone(&capslock_value),
-        Arc::clone(&virtual_device),
-        "L1".to_string(),
-        rules.to_vec(),
-        Arc::clone(&super_idol),
-    );
-    let handle_2 = grab_device(
-        device_hash_map.get("R1").unwrap().to_string(),
-        Arc::clone(&capslock_value),
-        Arc::clone(&virtual_device),
-        "R1".to_string(),
-        rules.to_vec(),
-        Arc::clone(&super_idol),
-    );
+    // threads
+    let aliases = vec!["L1", "R1"];
+    let mut handles = Vec::new();
 
-    handle_1.join().unwrap();
-    handle_2.join().unwrap();
+    for alias in aliases {
+        println!(" {:#?}", alias);
+
+        let handle = grab_device(
+            device_hash_map.get(alias).unwrap().to_string(),
+            Arc::clone(&capslock_value),
+            Arc::clone(&virtual_device),
+            alias.to_string(),
+            rules.to_vec(),
+            Arc::clone(&baka_mitai_vector),
+        );
+
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
 
 fn grab_device(

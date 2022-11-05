@@ -6,12 +6,13 @@ use std::{
 
 use evdev::{
     uinput::{VirtualDevice, VirtualDeviceBuilder},
-    AttributeSet, Device, EventType, InputEvent, InputEventKind, Key,
+    AttributeSet, Device, EventType, InputEvent, InputEventKind, Key, MiscType, Synchronization,
 };
 
+#[derive(Debug)]
 struct InputSequenceElement {
-    device: String,
-    key: Key,
+    device_alias: String,
+    code: u16,
     value: i32,
 }
 
@@ -30,6 +31,13 @@ pub fn something() {
         ("L2", "usb-0000:00:1d.0-1.5.1.2/input0"),
     ]);
 
+    let rules = vec![
+        vec![Key::KEY_LEFTCTRL.code(), Key::KEY_J.code()],
+        vec![Key::KEY_LEFTCTRL.code(), Key::KEY_K.code()],
+    ];
+
+    let super_idol: Arc<Mutex<Vec<u16>>> = Arc::new(Mutex::new([].to_vec()));
+
     let capslock_value = Arc::new(Mutex::new(0));
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
 
@@ -37,11 +45,17 @@ pub fn something() {
         device_hash_map.get("L1").unwrap().to_string(),
         Arc::clone(&capslock_value),
         Arc::clone(&virtual_device),
+        "L1".to_string(),
+        rules.to_vec(),
+        Arc::clone(&super_idol),
     );
     let handle_2 = grab_device(
         device_hash_map.get("R1").unwrap().to_string(),
         Arc::clone(&capslock_value),
         Arc::clone(&virtual_device),
+        "R1".to_string(),
+        rules.to_vec(),
+        Arc::clone(&super_idol),
     );
 
     handle_1.join().unwrap();
@@ -52,6 +66,9 @@ fn grab_device(
     path: String,
     capslock_value: Arc<Mutex<i32>>,
     virtual_device: Arc<Mutex<VirtualDevice>>,
+    device_alias: String,
+    rules: Vec<Vec<u16>>,
+    baka_mitai_vector: Arc<Mutex<Vec<u16>>>,
 ) -> thread::JoinHandle<()> {
     let handle = thread::spawn(move || {
         let mut device = get_device_from_path(&path);
@@ -84,6 +101,35 @@ fn grab_device(
                     let emmit_event =
                         InputEvent::new(EventType::KEY, Key::KEY_LEFTSHIFT.code(), ev.value());
                     virtual_device.lock().unwrap().emit(&[emmit_event]).unwrap();
+                }
+
+                if ev.kind() != InputEventKind::Synchronization(Synchronization::SYN_REPORT)
+                    && ev.kind() != InputEventKind::Misc(MiscType::MSC_SCAN)
+                {
+                    let sequence_element = InputSequenceElement {
+                        device_alias: device_alias.to_string(),
+                        code: ev.code(),
+                        value: ev.value(),
+                    };
+
+                    println!(" {:#?}", sequence_element);
+
+                    // baka mitai
+
+                    let mut baka_mitai_vector = baka_mitai_vector.lock().unwrap();
+                    let value = ev.value();
+                    let code = ev.code();
+
+                    if value == 0 {
+                        let i = baka_mitai_vector.iter().position(|x| *x == code).unwrap();
+                        baka_mitai_vector.remove(i);
+                    } else {
+                        if !baka_mitai_vector.contains(&code) {
+                            baka_mitai_vector.push(code)
+                        }
+                    }
+
+                    println!(" {:#?}", baka_mitai_vector)
                 }
             }
         }

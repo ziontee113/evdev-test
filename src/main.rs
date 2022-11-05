@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 use evdev::{
     uinput::{VirtualDevice, VirtualDeviceBuilder},
     AttributeSet, Device, EventType, InputEvent, InputEventKind, Key,
@@ -20,6 +22,18 @@ fn main() {
     // test_hard_coded_device(device_paths.get(1).unwrap())
 
     experiment::something()
+
+    // hash_map_experiment()
+}
+
+fn hash_map_experiment() {
+    let mut map = HashMap::new();
+
+    map.insert(Key::KEY_LEFTSHIFT, "left_shift");
+    map.insert(Key::KEY_A, "a");
+
+    let result = map.get(&Key::KEY_A).unwrap();
+    println!(" {:#?}", result)
 }
 
 fn new_virtual_keyboard() -> VirtualDevice {

@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::{Arc, Mutex},
     thread,
 };
@@ -8,25 +9,37 @@ use evdev::{
     AttributeSet, Device, EventType, InputEvent, InputEventKind, Key,
 };
 
+struct InputSequenceElement {
+    device: String,
+    key: Key,
+    value: i32,
+}
+
 pub fn something() {
-    let device_paths = vec![
-        "usb-0000:00:1d.0-1.5.1.4/input0", // A
-        "usb-0000:00:1d.0-1.5.2/input0",   // B
-        "usb-0000:00:1d.0-1.5.1.2/input0", // C
-        "usb-0000:00:1d.0-1.5.1.1/input0",
-        "usb-0000:00:1d.0-1.5.3/input0",
-    ];
+    // let device_paths = vec![
+    //     "usb-0000:00:1d.0-1.5.1.4/input0", // A
+    //     "usb-0000:00:1d.0-1.5.2/input0",   // B
+    //     "usb-0000:00:1d.0-1.5.1.2/input0", // C
+    //     "usb-0000:00:1d.0-1.5.1.1/input0",
+    //     "usb-0000:00:1d.0-1.5.3/input0",
+    // ];
+
+    let device_hash_map = HashMap::from([
+        ("L1", "usb-0000:00:1d.0-1.5.1.4/input0"),
+        ("R1", "usb-0000:00:1d.0-1.5.2/input0"),
+        ("L2", "usb-0000:00:1d.0-1.5.1.2/input0"),
+    ]);
 
     let capslock_value = Arc::new(Mutex::new(0));
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
 
     let handle_1 = grab_device(
-        device_paths.get(1).unwrap().to_string(),
+        device_hash_map.get("L1").unwrap().to_string(),
         Arc::clone(&capslock_value),
         Arc::clone(&virtual_device),
     );
     let handle_2 = grab_device(
-        device_paths.get(0).unwrap().to_string(),
+        device_hash_map.get("R1").unwrap().to_string(),
         Arc::clone(&capslock_value),
         Arc::clone(&virtual_device),
     );

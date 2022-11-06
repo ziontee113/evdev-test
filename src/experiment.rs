@@ -101,21 +101,27 @@ fn grab_device(
     return handle;
 }
 
+fn press_virtual_key(virtual_device: &Arc<Mutex<VirtualDevice>>, code: u16, value: i32) {
+    let emit_event = InputEvent::new(EventType::KEY, code, value);
+    let mut virtual_device = virtual_device.lock().unwrap();
+    virtual_device.emit(&[emit_event]).unwrap();
+}
+
 fn check_hashmap_do_action(
     keypress_vector: &mut Vec<(String, u16)>,
     rules: HashMap<Vec<(String, u16)>, (String, u16)>,
     virtual_device: Arc<Mutex<VirtualDevice>>,
-    value: i32,
+    ev: InputEvent,
 ) {
     match rules.get(keypress_vector) {
-        Some(action) => {
-            if value != 2 {
-                let emit_event = InputEvent::new(EventType::KEY, action.1, value);
-                let mut virtual_device = virtual_device.lock().unwrap();
-                virtual_device.emit(&[emit_event]).unwrap();
+        Some((_, code)) => {
+            for (_, code) in keypress_vector {
+                press_virtual_key(&virtual_device, *code, 0);
             }
+
+            press_virtual_key(&virtual_device, *code, ev.value());
         }
-        _ => (),
+        None => press_virtual_key(&virtual_device, ev.code(), ev.value()),
     }
 }
 
@@ -136,7 +142,7 @@ fn update_keypress_vector(
                 .iter()
                 .position(|x| x == &alias_and_code)
                 .unwrap();
-            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev);
             keypress_vector.remove(i);
         }
         1 => {
@@ -154,10 +160,10 @@ fn update_keypress_vector(
             // }
 
             keypress_vector.push(alias_and_code);
-            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev);
         }
         _ => {
-            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev);
         }
     }
 

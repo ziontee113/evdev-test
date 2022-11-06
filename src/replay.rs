@@ -1,6 +1,5 @@
-use crate::physical_device::InputEventKindCheck;
-
 use super::physical_device;
+use crate::physical_device::InputEventKindCheck;
 use std::{collections::HashMap, thread};
 
 pub fn replay() {

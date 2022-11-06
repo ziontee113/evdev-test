@@ -1,4 +1,17 @@
-use evdev::Device;
+use evdev::{Device, InputEvent, InputEventKind};
+
+pub trait InputEventKindCheck {
+    fn is_type_key(&self) -> bool;
+}
+
+impl InputEventKindCheck for InputEvent {
+    fn is_type_key(&self) -> bool {
+        match &self.kind() {
+            InputEventKind::Key(_) => true,
+            _ => false,
+        }
+    }
+}
 
 pub fn from_path(path: &str) -> Device {
     let devices = evdev::enumerate().map(|t| t.1).collect::<Vec<_>>();

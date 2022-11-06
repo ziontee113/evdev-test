@@ -17,19 +17,31 @@ pub fn something() {
         ("L2", "usb-0000:00:1d.0-1.5.1.2/input0"),
     ]);
 
-    let rules = vec![
-        vec![Key::KEY_LEFTCTRL.code(), Key::KEY_J.code()],
-        vec![Key::KEY_LEFTCTRL.code(), Key::KEY_K.code()],
-    ];
-
     let keypress_vector: Arc<Mutex<Vec<(String, u16)>>> = Arc::new(Mutex::new([].to_vec()));
+
     let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
     let time_now = Arc::new(Mutex::new(SystemTime::now()));
 
-    // threads
     let aliases = vec!["L1", "R1"];
     let mut handles = Vec::new();
 
+    let rules = vec![
+        vec![
+            ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
+            ("R1".to_string(), Key::KEY_J.code()),
+        ],
+        vec![
+            ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
+            ("R1".to_string(), Key::KEY_K.code()),
+        ],
+        vec![
+            ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
+            ("L1".to_string(), Key::KEY_LEFTSHIFT.code()),
+            ("R1".to_string(), Key::KEY_P.code()),
+        ],
+    ];
+
+    // threads
     for alias in aliases {
         println!(" {:#?}", alias);
 
@@ -54,7 +66,7 @@ fn grab_device(
     path: String,
     virtual_device: Arc<Mutex<VirtualDevice>>,
     device_alias: String,
-    rules: Vec<Vec<u16>>,
+    rules: Vec<Vec<(String, u16)>>,
     keypress_vector: Arc<Mutex<Vec<(String, u16)>>>,
     time_now: Arc<Mutex<SystemTime>>,
 ) -> thread::JoinHandle<()> {
@@ -77,6 +89,7 @@ fn grab_device(
                         device_alias.to_string(),
                         &mut keypress_vector.lock().unwrap(),
                         &mut time_now.lock().unwrap(),
+                        rules.to_vec(),
                     );
                 }
             }
@@ -86,12 +99,43 @@ fn grab_device(
     return handle;
 }
 
+fn all_match(keypress_vector: &mut Vec<(String, u16)>, rules: Vec<Vec<(String, u16)>>) {
+    if keypress_vector.len() == 0 {
+        return;
+    }
+
+    let mut all_match = false;
+    for rule in rules {
+        if rule.len() == keypress_vector.len() {
+            let mut matches = 0;
+            let mut rule_fragment_index = 0;
+            for rule_fragment in rule {
+                if &rule_fragment == keypress_vector.get(rule_fragment_index).unwrap() {
+                    matches += 1;
+                    if matches == keypress_vector.len() {
+                        all_match = true;
+                        break;
+                    }
+                }
+                rule_fragment_index += 1;
+            }
+        }
+    }
+
+    if all_match {
+        println!("all match! {:?}", keypress_vector);
+    }
+}
+
 fn update_keypress_vector(
     ev: InputEvent,
     device_alias: String,
     keypress_vector: &mut Vec<(String, u16)>,
     time_now: &mut SystemTime,
+    rules: Vec<Vec<(String, u16)>>,
 ) {
+    all_match(keypress_vector, rules);
+
     let alias_and_code = (device_alias, ev.code());
 
     match ev.value() {
@@ -101,16 +145,19 @@ fn update_keypress_vector(
                 .position(|x| x == &alias_and_code)
                 .unwrap();
             keypress_vector.remove(i);
-
-            if keypress_vector.len() == 0 {
-                let time_diff = time_now.elapsed().unwrap().as_millis();
-                println!(" {:?}", time_diff)
-            }
         }
         1 => {
             if keypress_vector.len() == 0 {
                 *time_now = SystemTime::now();
-                println!(" {:?}", time_now)
+            }
+
+            if keypress_vector.len() > 0 {
+                let time_diff = time_now.elapsed().unwrap().as_millis();
+                println!(
+                    "keypress_vector len() = {}, time_diff = {:?}",
+                    keypress_vector.len(),
+                    time_diff
+                )
             }
 
             keypress_vector.push(alias_and_code);
@@ -118,7 +165,7 @@ fn update_keypress_vector(
         _ => (),
     }
 
-    println!("{:?} {}", keypress_vector, ev.value())
+    // println!("{:?} {}", keypress_vector, ev.value())
 }
 
 fn emit_event_constructor(value: i32) -> InputEvent {

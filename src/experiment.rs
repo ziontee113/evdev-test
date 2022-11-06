@@ -1,13 +1,10 @@
+use super::{physical_device, virtual_device};
+use evdev::{uinput::VirtualDevice, InputEvent, InputEventKind, Key, MiscType, Synchronization};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
     thread,
     time::SystemTime,
-};
-
-use evdev::{
-    uinput::{VirtualDevice, VirtualDeviceBuilder},
-    AttributeSet, Device, EventType, InputEvent, InputEventKind, Key, MiscType, Synchronization,
 };
 
 pub fn something() {
@@ -19,7 +16,7 @@ pub fn something() {
 
     let keypress_vector: Arc<Mutex<Vec<(String, u16)>>> = Arc::new(Mutex::new([].to_vec()));
 
-    let virtual_device = Arc::new(Mutex::new(new_virtual_keyboard()));
+    let virtual_device = Arc::new(Mutex::new(virtual_device::new()));
     let time_now = Arc::new(Mutex::new(SystemTime::now()));
 
     let aliases = vec!["L1", "R1"];
@@ -39,6 +36,22 @@ pub fn something() {
             ("R1".to_string(), Key::KEY_K.code()),
         ],
         ("R1".to_string(), Key::KEY_B.code()),
+    );
+    the_hash_map.insert(
+        vec![
+            ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
+            ("L1".to_string(), Key::KEY_LEFTSHIFT.code()),
+            ("R1".to_string(), Key::KEY_P.code()),
+        ],
+        ("R1".to_string(), Key::KEY_Q.code()),
+    );
+    the_hash_map.insert(
+        vec![
+            ("L1".to_string(), Key::KEY_CAPSLOCK.code()),
+            ("L1".to_string(), Key::KEY_A.code()),
+            ("R1".to_string(), Key::KEY_J.code()),
+        ],
+        ("R1".to_string(), Key::KEY_W.code()),
     );
     let the_hash_map = Arc::new(Mutex::new(the_hash_map.clone()));
 
@@ -72,7 +85,7 @@ fn grab_device(
     time_now: Arc<Mutex<SystemTime>>,
 ) -> thread::JoinHandle<()> {
     let handle = thread::spawn(move || {
-        let mut device = get_device_from_path(&path);
+        let mut device = physical_device::from_path(&path);
         device.grab().unwrap();
 
         // TODO: make some rules
@@ -101,12 +114,6 @@ fn grab_device(
     return handle;
 }
 
-fn press_virtual_key(virtual_device: &Arc<Mutex<VirtualDevice>>, code: u16, value: i32) {
-    let emit_event = InputEvent::new(EventType::KEY, code, value);
-    let mut virtual_device = virtual_device.lock().unwrap();
-    virtual_device.emit(&[emit_event]).unwrap();
-}
-
 fn check_hashmap_do_action(
     keypress_vector: &mut Vec<(String, u16)>,
     rules: HashMap<Vec<(String, u16)>, (String, u16)>,
@@ -116,12 +123,13 @@ fn check_hashmap_do_action(
     match rules.get(keypress_vector) {
         Some((_, code)) => {
             for (_, code) in keypress_vector {
-                press_virtual_key(&virtual_device, *code, 0);
+                virtual_device::emit_key(&virtual_device, *code, 0);
             }
+            // TODO: restore whatever comes before this shit! (like ctrl, shift, etc...)
 
-            press_virtual_key(&virtual_device, *code, ev.value());
+            virtual_device::emit_key(&virtual_device, *code, ev.value());
         }
-        None => press_virtual_key(&virtual_device, ev.code(), ev.value()),
+        None => virtual_device::emit_key(&virtual_device, ev.code(), ev.value()),
     }
 }
 
@@ -168,62 +176,4 @@ fn update_keypress_vector(
     }
 
     // println!("{:?} {}", keypress_vector, ev.value())
-}
-
-fn new_virtual_keyboard() -> VirtualDevice {
-    let mut keys = AttributeSet::<Key>::new();
-    keys.insert(Key::KEY_LEFTSHIFT);
-    keys.insert(Key::KEY_LEFTCTRL);
-    keys.insert(Key::KEY_LEFTALT);
-    keys.insert(Key::KEY_LEFTMETA);
-    keys.insert(Key::KEY_Q);
-    keys.insert(Key::KEY_W);
-    keys.insert(Key::KEY_E);
-    keys.insert(Key::KEY_R);
-    keys.insert(Key::KEY_T);
-    keys.insert(Key::KEY_Y);
-    keys.insert(Key::KEY_I);
-    keys.insert(Key::KEY_O);
-    keys.insert(Key::KEY_P);
-    keys.insert(Key::KEY_A);
-    keys.insert(Key::KEY_S);
-    keys.insert(Key::KEY_D);
-    keys.insert(Key::KEY_F);
-    keys.insert(Key::KEY_G);
-    keys.insert(Key::KEY_H);
-    keys.insert(Key::KEY_J);
-    keys.insert(Key::KEY_K);
-    keys.insert(Key::KEY_L);
-    keys.insert(Key::KEY_Z);
-    keys.insert(Key::KEY_X);
-    keys.insert(Key::KEY_C);
-    keys.insert(Key::KEY_V);
-    keys.insert(Key::KEY_B);
-    keys.insert(Key::KEY_V);
-    keys.insert(Key::KEY_N);
-    keys.insert(Key::KEY_M);
-    keys.insert(Key::KEY_COMMA);
-
-    let virtual_device = VirtualDeviceBuilder::new()
-        .unwrap()
-        .name("Fake Keyboard")
-        .with_keys(&keys)
-        .unwrap()
-        .build()
-        .unwrap();
-
-    return virtual_device;
-}
-
-fn get_device_from_path(path: &str) -> Device {
-    let devices = evdev::enumerate().map(|t| t.1).collect::<Vec<_>>();
-    let mut device_index = 0;
-    for (i, d) in devices.iter().enumerate() {
-        // println!("{}", d.physical_path().unwrap());
-        if d.physical_path().unwrap() == path {
-            device_index = i;
-            break;
-        }
-    }
-    devices.into_iter().nth(device_index).unwrap()
 }

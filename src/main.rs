@@ -9,6 +9,9 @@ use evdev::{
 
 mod _pick_device;
 mod experiment;
+mod mamba;
+mod physical_device;
+mod virtual_device;
 
 fn main() {
     // let device_paths = vec![
@@ -21,7 +24,9 @@ fn main() {
     //
     // test_hard_coded_device(device_paths.get(1).unwrap())
 
-    experiment::something()
+    // experiment::something()
+
+    mamba::black_mamba();
 
     // hash_map_experiment()
 }

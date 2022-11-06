@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
     thread,
     time::SystemTime,
 };
@@ -25,21 +25,22 @@ pub fn something() {
     let aliases = vec!["L1", "R1"];
     let mut handles = Vec::new();
 
-    let rules = vec![
+    let mut the_hash_map = HashMap::new();
+    the_hash_map.insert(
         vec![
             ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
             ("R1".to_string(), Key::KEY_J.code()),
         ],
+        ("R1".to_string(), Key::KEY_A.code()),
+    );
+    the_hash_map.insert(
         vec![
             ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
             ("R1".to_string(), Key::KEY_K.code()),
         ],
-        vec![
-            ("L1".to_string(), Key::KEY_LEFTCTRL.code()),
-            ("L1".to_string(), Key::KEY_LEFTSHIFT.code()),
-            ("R1".to_string(), Key::KEY_P.code()),
-        ],
-    ];
+        ("R1".to_string(), Key::KEY_B.code()),
+    );
+    let the_hash_map = Arc::new(Mutex::new(the_hash_map.clone()));
 
     // threads
     for alias in aliases {
@@ -49,7 +50,7 @@ pub fn something() {
             device_hash_map.get(alias).unwrap().to_string(),
             Arc::clone(&virtual_device),
             alias.to_string(),
-            rules.to_vec(),
+            Arc::clone(&the_hash_map),
             Arc::clone(&keypress_vector),
             Arc::clone(&time_now),
         );
@@ -66,7 +67,7 @@ fn grab_device(
     path: String,
     virtual_device: Arc<Mutex<VirtualDevice>>,
     device_alias: String,
-    rules: Vec<Vec<(String, u16)>>,
+    rules: Arc<Mutex<HashMap<Vec<(String, u16)>, (String, u16)>>>,
     keypress_vector: Arc<Mutex<Vec<(String, u16)>>>,
     time_now: Arc<Mutex<SystemTime>>,
 ) -> thread::JoinHandle<()> {
@@ -89,7 +90,8 @@ fn grab_device(
                         device_alias.to_string(),
                         &mut keypress_vector.lock().unwrap(),
                         &mut time_now.lock().unwrap(),
-                        rules.to_vec(),
+                        rules.lock().unwrap().clone(),
+                        Arc::clone(&virtual_device),
                     );
                 }
             }
@@ -99,31 +101,21 @@ fn grab_device(
     return handle;
 }
 
-fn all_match(keypress_vector: &mut Vec<(String, u16)>, rules: Vec<Vec<(String, u16)>>) {
-    if keypress_vector.len() == 0 {
-        return;
-    }
-
-    let mut all_match = false;
-    for rule in rules {
-        if rule.len() == keypress_vector.len() {
-            let mut matches = 0;
-            let mut rule_fragment_index = 0;
-            for rule_fragment in rule {
-                if &rule_fragment == keypress_vector.get(rule_fragment_index).unwrap() {
-                    matches += 1;
-                    if matches == keypress_vector.len() {
-                        all_match = true;
-                        break;
-                    }
-                }
-                rule_fragment_index += 1;
+fn check_hashmap_do_action(
+    keypress_vector: &mut Vec<(String, u16)>,
+    rules: HashMap<Vec<(String, u16)>, (String, u16)>,
+    virtual_device: Arc<Mutex<VirtualDevice>>,
+    value: i32,
+) {
+    match rules.get(keypress_vector) {
+        Some(action) => {
+            if value != 2 {
+                let emit_event = InputEvent::new(EventType::KEY, action.1, value);
+                let mut virtual_device = virtual_device.lock().unwrap();
+                virtual_device.emit(&[emit_event]).unwrap();
             }
         }
-    }
-
-    if all_match {
-        println!("all match! {:?}", keypress_vector);
+        _ => (),
     }
 }
 
@@ -132,10 +124,10 @@ fn update_keypress_vector(
     device_alias: String,
     keypress_vector: &mut Vec<(String, u16)>,
     time_now: &mut SystemTime,
-    rules: Vec<Vec<(String, u16)>>,
+    rules: HashMap<Vec<(String, u16)>, (String, u16)>,
+    virtual_device: Arc<Mutex<VirtualDevice>>,
 ) {
-    all_match(keypress_vector, rules);
-
+    //
     let alias_and_code = (device_alias, ev.code());
 
     match ev.value() {
@@ -144,6 +136,7 @@ fn update_keypress_vector(
                 .iter()
                 .position(|x| x == &alias_and_code)
                 .unwrap();
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
             keypress_vector.remove(i);
         }
         1 => {
@@ -151,27 +144,24 @@ fn update_keypress_vector(
                 *time_now = SystemTime::now();
             }
 
-            if keypress_vector.len() > 0 {
-                let time_diff = time_now.elapsed().unwrap().as_millis();
-                println!(
-                    "keypress_vector len() = {}, time_diff = {:?}",
-                    keypress_vector.len(),
-                    time_diff
-                )
-            }
+            // if keypress_vector.len() > 0 {
+            //     let time_diff = time_now.elapsed().unwrap().as_millis();
+            //     println!(
+            //         "keypress_vector len() = {}, time_diff = {:?}",
+            //         keypress_vector.len(),
+            //         time_diff
+            //     )
+            // }
 
             keypress_vector.push(alias_and_code);
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
         }
-        _ => (),
+        _ => {
+            check_hashmap_do_action(keypress_vector, rules, virtual_device, ev.value());
+        }
     }
 
     // println!("{:?} {}", keypress_vector, ev.value())
-}
-
-fn emit_event_constructor(value: i32) -> InputEvent {
-    let type_ = EventType::KEY;
-    let code = Key::KEY_Z.code();
-    InputEvent::new(type_, code, value)
 }
 
 fn new_virtual_keyboard() -> VirtualDevice {

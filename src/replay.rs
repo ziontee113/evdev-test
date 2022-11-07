@@ -1,12 +1,13 @@
 use super::physical_device;
 use crate::{
     physical_device::InputEventKindCheck,
-    raw_event_stack::{RawEventFragment, RawEventStack},
+    raw_input_stack::{RawInputFragment, RawInputStack},
 };
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
     thread,
+    time::SystemTime,
 };
 
 pub fn replay() {
@@ -15,7 +16,7 @@ pub fn replay() {
         ("R1", "usb-0000:00:1d.0-1.5.2/input0"),
     ]);
 
-    let raw_stack = Arc::new(Mutex::new(RawEventStack::new()));
+    let raw_stack = Arc::new(Mutex::new(RawInputStack::new()));
 
     let mut handles = Vec::new();
     for (device_alias, device_path) in devices_dictionary {
@@ -31,14 +32,19 @@ pub fn replay() {
             loop {
                 for ev in d.fetch_events().unwrap() {
                     if ev.is_type_key() {
-                        let fragment = RawEventFragment {
+                        let fragment = RawInputFragment {
                             device_alias: device_alias.to_string(),
                             code: ev.code(),
                             value: ev.value(),
+                            time: SystemTime::now(),
                         };
                         let mut raw_stack = raw_stack.lock().unwrap();
                         raw_stack.receive(fragment);
-                        raw_stack.print();
+                        // raw_stack.print();
+
+                        if ev.value() == 1 {
+                            raw_stack.print_combined_time()
+                        }
                     }
                 }
             }

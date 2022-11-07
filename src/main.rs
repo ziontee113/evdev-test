@@ -1,5 +1,5 @@
 mod physical_device;
-mod raw_event_stack;
+mod raw_input_stack;
 mod replay;
 mod virtual_device;
 

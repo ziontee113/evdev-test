@@ -43,7 +43,13 @@ fn handle_input_device(
         let mut d = physical_device::from_path(&device_path);
         match d.grab() {
             Ok(_) => println!("Grabbed {} {} SUCCESSFULLY", device_alias, device_path),
-            Err(_) => println!("FAILED TO GRAB {} {}", device_alias, device_path),
+            Err(err) => {
+                println!(
+                    "FAILED TO GRAB device '{}' at {}\n{}\n------------------",
+                    device_alias, device_path, err
+                );
+                return;
+            }
         }
 
         loop {

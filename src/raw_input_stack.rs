@@ -32,10 +32,16 @@ impl RawInputStack {
             _ => (),
         }
 
-        self.parse_intput();
+        self.parse_input();
+        // self.detect_union();
     }
 
-    fn parse_intput(&self) {
+    fn parse_input(&self) {
+        //
+    }
+
+    #[allow(dead_code)]
+    fn detect_union(&self) {
         let total: u128 = self
             .fragments
             .iter()

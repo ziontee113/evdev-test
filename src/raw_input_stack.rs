@@ -18,7 +18,7 @@ impl RawInputStack {
         Self { fragments: vec![] }
     }
 
-    pub fn receive(&mut self, fragment: RawInputFragment) {
+    pub fn handle_incoming_input(&mut self, fragment: RawInputFragment) {
         match fragment.value {
             0 => {
                 let i = self.fragments.iter().position(|f| {
@@ -31,27 +31,29 @@ impl RawInputStack {
             1 => self.fragments.push(fragment),
             _ => (),
         }
-    }
-}
 
-impl RawInputStack {
-    pub fn print(&self) {
-        dbg!(&self.fragments);
+        self.parse_intput();
     }
 
-    pub fn print_combined_time(&self) {
+    fn parse_intput(&self) {
         let total: u128 = self
             .fragments
             .iter()
             .map(|f| f.time.elapsed().unwrap().as_millis())
             .sum();
 
-        println!("total time = {}", total);
+        // TODO: Union detector based on this
+        if total < 30 && self.fragments.len() > 1 {
+            println!("----------------------");
+            println!("total time = {}", total);
+            dbg!(&self.fragments);
+        }
     }
+}
 
-    // TODO: base on .fragments:
-    // - validate input type
-    // - trigger action
-    //      + has rules
-    //      + raw action
+impl RawInputStack {
+    #[allow(dead_code)]
+    pub fn print(&self) {
+        dbg!(&self.fragments);
+    }
 }

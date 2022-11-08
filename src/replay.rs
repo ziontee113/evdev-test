@@ -39,12 +39,8 @@ pub fn replay() {
                             time: SystemTime::now(),
                         };
                         let mut raw_stack = raw_stack.lock().unwrap();
-                        raw_stack.receive(fragment);
+                        raw_stack.handle_incoming_input(fragment);
                         // raw_stack.print();
-
-                        if ev.value() == 1 {
-                            raw_stack.print_combined_time()
-                        }
                     }
                 }
             }

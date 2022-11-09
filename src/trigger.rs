@@ -10,6 +10,13 @@ impl TriggerKeyFragment {
     }
 }
 
+#[macro_export]
+macro_rules! trigfrag {
+    ($a:expr, $b:expr) => {
+        TriggerKeyFragment::new($a.to_string(), $b)
+    };
+}
+
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Trigger {
     KeyPress(TriggerKeyFragment),

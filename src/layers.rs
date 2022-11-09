@@ -1,22 +1,26 @@
 use crate::{action::Action, trigger::Trigger};
 use std::collections::BTreeMap;
 
-struct LayersLibrary {
+pub struct LayerLibrary {
     layers: BTreeMap<String, Layer>,
+    active_layer: String,
 }
 
-impl LayersLibrary {
+impl LayerLibrary {
     pub fn new(layers: Vec<Layer>) -> Self {
         let mut map = BTreeMap::new();
         for l in layers {
             map.insert(l.name.to_string(), l.clone());
         }
-        Self { layers: map }
+        Self {
+            active_layer: map.keys().next().unwrap().to_string(),
+            layers: map,
+        }
     }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
-struct Layer {
+pub struct Layer {
     rules: BTreeMap<Trigger, Action>,
     name: String,
 }

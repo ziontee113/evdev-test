@@ -1,7 +1,13 @@
+use evdev::Key;
+
 use super::physical_device;
 use crate::{
+    action::{Action, SingleKeyAction},
+    layers::{Layer, LayerLibrary},
     physical_device::InputEventKindCheck,
     raw_input_stack::{RawInputFragment, RawInputStack},
+    trigfrag,
+    trigger::{Trigger, TriggerKeyFragment},
 };
 use std::{
     collections::HashMap,
@@ -22,6 +28,26 @@ pub fn replay() {
         ),
     ]);
 
+    // fun stuff
+    let fragment_1 = trigfrag!("L1", Key::KEY_A.code());
+    let fragment_2a = trigfrag!("L1", Key::KEY_LEFTCTRL.code());
+    let fragment_2b = trigfrag!("R1", Key::KEY_J.code());
+
+    let trigger_1 = Trigger::KeyPress(fragment_1);
+    let trigger_2 = Trigger::KeyChain(vec![fragment_2a, fragment_2b]);
+
+    let action_1 = SingleKeyAction::new(String::from("R1"), Key::KEY_A.code());
+    let action_1 = Action::SingleKeyAction(action_1);
+    let action_2 = SingleKeyAction::new(String::from("R1"), Key::KEY_B.code());
+    let action_2 = Action::SingleKeyAction(action_2);
+
+    let mut base_layer = Layer::new(String::from("Base Layer"));
+    base_layer.add_rule(trigger_1, action_1);
+    base_layer.add_rule(trigger_2, action_2);
+
+    let layers_lib = LayerLibrary::new(vec![base_layer]);
+
+    // normal stuff
     let raw_stack = Arc::new(Mutex::new(RawInputStack::new()));
 
     let mut handles = vec![];

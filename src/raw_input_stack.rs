@@ -1,4 +1,12 @@
-use std::time::SystemTime;
+use std::{
+    sync::{Arc, Mutex},
+    time::SystemTime,
+};
+
+use crate::{
+    layers::LayerLibrary,
+    trigger::{Trigger, TriggerKeyFragment},
+};
 
 #[derive(Debug)]
 pub struct RawInputFragment {
@@ -18,7 +26,10 @@ impl RawInputStack {
         Self { fragments: vec![] }
     }
 
-    pub fn handle_incoming_input(&mut self, fragment: RawInputFragment) {
+    pub fn handle_incoming_input(&mut self, fragment: RawInputFragment, layers_lib: &LayerLibrary) {
+        self.parse_input(&fragment, layers_lib);
+
+        // handle self.fragments?
         match fragment.value {
             0 => {
                 let i = self.fragments.iter().position(|f| {
@@ -32,12 +43,25 @@ impl RawInputStack {
             _ => (),
         }
 
-        self.parse_input();
         // self.detect_union();
     }
 
-    fn parse_input(&self) {
-        //
+    fn parse_input(&self, fragment: &RawInputFragment, layers_lib: &LayerLibrary) {
+        // check for single remaps
+        let alias = &fragment.device_alias;
+        let code = &fragment.code;
+
+        let rules = layers_lib.get_current_layer().get_rules();
+        let trigger = TriggerKeyFragment::new(alias.to_owned(), code.to_owned());
+        let trigger = Trigger::KeyPress(trigger);
+
+        match rules.get(&trigger) {
+            Some(action) => {
+                dbg!(action);
+                // TODO: implement action.invoke()
+            }
+            _ => (),
+        }
     }
 
     #[allow(dead_code)]

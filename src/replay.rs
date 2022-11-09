@@ -36,9 +36,9 @@ pub fn replay() {
     let trigger_1 = Trigger::KeyPress(fragment_1);
     let trigger_2 = Trigger::KeyChain(vec![fragment_2a, fragment_2b]);
 
-    let action_1 = SingleKeyAction::new(String::from("R1"), Key::KEY_A.code());
+    let action_1 = SingleKeyAction::new(String::from("R1"), Key::KEY_O.code());
     let action_1 = Action::SingleKeyAction(action_1);
-    let action_2 = SingleKeyAction::new(String::from("R1"), Key::KEY_B.code());
+    let action_2 = SingleKeyAction::new(String::from("R1"), Key::KEY_P.code());
     let action_2 = Action::SingleKeyAction(action_2);
 
     let mut base_layer = Layer::new(String::from("Base Layer"));
@@ -52,7 +52,7 @@ pub fn replay() {
 
     let mut handles = vec![];
     for (alias, path) in dictionary {
-        let h = handle_input_device(alias, path, Arc::clone(&raw_stack));
+        let h = handle_input_device(alias, path, Arc::clone(&raw_stack), layers_lib.clone());
         handles.push(h);
     }
     for h in handles {
@@ -64,6 +64,7 @@ fn handle_input_device(
     device_alias: String,
     device_path: String,
     raw_stack: Arc<Mutex<RawInputStack>>,
+    layers_lib: LayerLibrary,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut d = physical_device::from_path(&device_path);
@@ -74,7 +75,6 @@ fn handle_input_device(
                     "FAILED TO GRAB {} {},\n{},\n------------------",
                     device_alias, device_path, err
                 );
-                return;
             }
         }
 
@@ -88,8 +88,7 @@ fn handle_input_device(
                         time: SystemTime::now(),
                     };
                     let mut raw_stack = raw_stack.lock().unwrap();
-                    raw_stack.handle_incoming_input(fragment);
-                    // raw_stack.print();
+                    raw_stack.handle_incoming_input(fragment, &layers_lib);
                 }
             }
         }

@@ -1,9 +1,10 @@
 use crate::{action::Action, trigger::Trigger};
 use std::collections::BTreeMap;
 
+#[derive(Clone)]
 pub struct LayerLibrary {
     layers: BTreeMap<String, Layer>,
-    active_layer: String,
+    current_layer: String,
 }
 
 impl LayerLibrary {
@@ -13,9 +14,13 @@ impl LayerLibrary {
             map.insert(l.name.to_string(), l.clone());
         }
         Self {
-            active_layer: map.keys().next().unwrap().to_string(),
+            current_layer: map.keys().next().unwrap().to_string(),
             layers: map,
         }
+    }
+
+    pub fn get_current_layer(&self) -> &Layer {
+        self.layers.get(&self.current_layer).unwrap()
     }
 }
 
@@ -42,5 +47,9 @@ impl Layer {
             None => println!("Cannot remove rule with invalid {:?} trigger", trigger),
             _ => (),
         }
+    }
+
+    pub fn get_rules(&self) -> &BTreeMap<Trigger, Action> {
+        &self.rules
     }
 }

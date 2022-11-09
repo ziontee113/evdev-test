@@ -1,4 +1,4 @@
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct SingleKeyAction {
     device_alias: String,
     code: u16,
@@ -10,7 +10,7 @@ impl SingleKeyAction {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub enum Action {
     SingleKeyAction(SingleKeyAction),
     // KeyChainAction,

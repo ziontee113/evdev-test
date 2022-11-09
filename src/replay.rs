@@ -45,7 +45,7 @@ fn handle_input_device(
             Ok(_) => println!("Grabbed {} {} SUCCESSFULLY", device_alias, device_path),
             Err(err) => {
                 println!(
-                    "FAILED TO GRAB device '{}' at {}\n{}\n------------------",
+                    "FAILED TO GRAB {} {},\n{},\n------------------",
                     device_alias, device_path, err
                 );
                 return;

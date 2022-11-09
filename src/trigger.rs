@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct TriggerKeyFragment {
     device_alias: String,
     code: u16,
@@ -10,7 +10,7 @@ impl TriggerKeyFragment {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Trigger {
     KeyPress(TriggerKeyFragment),
     KeyChain(Vec<TriggerKeyFragment>),
